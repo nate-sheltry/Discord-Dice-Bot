@@ -1,2 +1,32 @@
 /Discord Dice Bot.code-workspace
+# Environments
 .env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder Project settings
+.spyderproject
+.spyproject
+
+# Rope Settings
+.ropeproject
+
+# medocs documentation
+/site
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre
+.pyre/
+
+# pytype
+.pytype.
+
+# cython
+cython_debug/
