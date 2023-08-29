@@ -1,0 +1,14 @@
+{
+  "name": "karmic-dice-bot",
+  "version": "0.0.1",
+  "description": "a discord bot for rolling dice with a slight curb towards preventing repeated crit failures and repeated rolls.",
+  "main": "bot.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Nate Sheltry",
+  "license": "ISC",
+  "dependencies": {
+    "discord.js": "^14.13.0"
+  }
+}
