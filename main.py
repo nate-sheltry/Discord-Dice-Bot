@@ -52,11 +52,19 @@ def load_names():
             return None
     return empty_dict
 
-async def process_roll(ctx, author, what, adv = False, dis = False):
-    components = re.split(r'([+-])', what)
+async def process_roll(input_text):
+    space_string = ''
+    components = re.split(r'([+-])', input_text)
+    space_string = ''.join(components)
+    if(' ' in input_text):
+        components = re.split(r'\s', input_text)
+        space_string = ''.join(components)
+        components = re.split(r'([+-])', space_string)
+    
     
     dice = []
     operators = []
+    modifiers = []
     
     for comp in components:
         if comp in ('+', '-'):
@@ -67,7 +75,16 @@ async def process_roll(ctx, author, what, adv = False, dis = False):
                 num_dice = int(match.group(1) or 1)
                 dice_sides = int(match.group(2))
                 dice.append((num_dice, dice_sides))
-    return dice, operators
+            else:
+                value = comp
+                operator = operators.pop(len(operators)-1)
+                modifiers.append((operator, int(value)))
+    
+    print(f'Dice: {dice}')
+    print(f'Operators: {operators}')
+    print(f'Modifiers: {modifiers}')
+    
+    return dice, operators, modifiers
 
 def roll_die(player_id, max_num, min_num=1):
     roll = random.randint(min_num, max_num)
@@ -131,12 +148,9 @@ async def get_name(ctx):
         if(user_id_hash in guilds.get(guild_id_hash)):
             return f'{guilds.get(guild_id_hash).get(user_id_hash)}'
     if user_name == 'None':
-        print('get nickname')
         user_name = ctx.author.nick
-        logger.info(f"Nick Name: {ctx.author.nick}")
         if str(user_name) == 'None':
             user_name = ctx.author.name
-            logger.info(f"Name: {ctx.author.name}")
     return user_name
 
 
@@ -153,14 +167,12 @@ async def display_emphasized_roll(ctx, dice, rolls_array):
     
     
 
-async def display_roll(ctx, what, dice, operators, modifier, integer, adv=False, dis=False, rolls_array=[]):
-    
+async def display_roll(ctx, what, dice, operators, modifiers, adv=False, dis=False, rolls_array=[]):
     total = 0
     temp_array = []
     message = ''
     dice_message = ''
-    print('Display Roll Executed')
-    logger.info('Rolls Array:' + f'{rolls_array}')
+    modifier_total = 0
     
     name = Tm.bold_italics(await get_name(ctx))
     roll = Tm.inline_code(what)
@@ -208,24 +220,40 @@ async def display_roll(ctx, what, dice, operators, modifier, integer, adv=False,
         dice_message += f'{sum(dice[i])}\n'
     dice_message += '>  ' + f'------------------------------\n'
     
+    
     #compute total
     for i in range(len(dice)):
         temp_array.append(sum(dice[i]))
-        
+    
     total = temp_array[0]
     for i in range(len(operators)):
         if(operators[i] == '+'):
             total += temp_array[i+1]
         if(operators[i] == '-'):
             total -=  temp_array[i+1]
+    
     logger.info(temp_array)
+    
     dice_message += Tm.block_quote(f' {Tm.inline_code("Total Dice Modifier")}: {Tm.bold_italics(total-temp_array[0])}\n>  \n')
-    dice_message += Tm.block_quote(f' {Tm.inline_code("Modifier")}: {Tm.bold_italics(f"{modifier}{integer}")}')
+    dice_message += '>  ' + f'{Tm.bold("Modifiers:")}\n'
+    dice_message += '>  ('
     
+    for i in range(len(modifiers)):
+        modifier = modifiers[i]
+        if('+' in modifier[0]):
+            modifier_total += modifier[1]
+            if(i == 0):dice_message += f' {modifier[1]} '
+            else:dice_message += f'\t {modifier[0]} \t {modifier[1]}'
+        elif('-' in modifier[0]):
+            modifier_total -= modifier[1]
+            if(i == 0):dice_message += f' {modifier[0]}{modifier[1]} '
+            else:dice_message += f'\t {modifier[0]} \t {modifier[1]} '
+    dice_message += ')\n'
+    dice_message += '>  ' + f'------------------------------\n'
+    dice_message += Tm.block_quote(f' {Tm.inline_code("Modifiers Total")}: {Tm.bold_italics(f"{modifier_total}")}')
     message += dice_message
-    if(modifier == '-'):integer = integer*-1
     
-    message += f'\n' + '> \n' + (f' {Tm.inline_code("Total")}: {Tm.bold_italics(f"{total+integer}")}\t')
+    message += f'\n' + '> \n' + (f' {Tm.inline_code("Total")}: {Tm.bold_italics(f"{total+modifier_total}")}\t')
     message += Tm.inline_code(f'Natural Roll Value') + f': {Tm.bold_italics(temp_array[0])}'
     await ctx.send(message)
 
@@ -242,12 +270,10 @@ def run():
     @bot.event
     async def on_ready():
         data = load_names()
-        print(data)
         if data:
             print('yes')
             guilds.update(data)
         logger.info(f"(User: {bot.user}) (ID: {bot.user.id})")
-        print("___________")
         
     @bot.command(
         aliases=['switchKarmic', 'sK', 'SK', 'Sk'],
@@ -305,7 +331,7 @@ def run():
         "It only supports one numeric modifier that is not a die, and must be formatted as shown with a space on both sides of the arithmetic operator.",
         brief="Roll dice, modify your main dice roll and add a modifier."
     )
-    async def r(ctx, what="No Dice were clarified", modifier="+", integer="0"):
+    async def r(ctx, *, what):
         """Answers with pong"""
         set_random_seed()
         author = await get_name(ctx)
@@ -313,17 +339,12 @@ def run():
         user_id_hash = hash_string(user_id)
         
         result = {"value":[]}
-        array = []
-        if(integer.isdigit() == False):
-            integer = 0
         if("d" in what):
-            dice, operators = await process_roll(ctx, author, what)
+            dice, operators, modifiers = await process_roll(what)
             for die in dice:
                 result['value'].append(roll_dice(user_id_hash, die))
-            logger.info(result['value'])
-            logger.info(operators)
             await delete_message(ctx)
-            await display_roll(ctx, what, result['value'], operators, modifier, int(integer))
+            await display_roll(ctx, what, result['value'], operators, modifiers)
                 
             
     #Roll with Advantage
@@ -333,7 +354,7 @@ def run():
         description="Syntax is the same as the !roll command, however it will roll the first die specified twice\ntaking the higher of the two results.",
         brief="Rolls the dice with advantage,and can be modified with other dice ......"
     )
-    async def ra(ctx, what="No Dice were clarified", modifier="+", integer="0"):
+    async def ra(ctx, *, what):
         """Answers with pong"""
         set_random_seed()
         author = await get_name(ctx)
@@ -342,10 +363,8 @@ def run():
         
         result = {"value":[]}
         array = []
-        if(integer.isdigit() == False):
-            integer = 0
         if("d" in what):
-            dice, operators = await process_roll(ctx, author, what)
+            dice, operators, modifiers = await process_roll(what)
             for die in dice:
                 result['value'].append(roll_dice(user_id_hash, die))
             result1 = result['value'][0]
@@ -354,9 +373,8 @@ def run():
                 result['value'][0] = result1
             elif sum(result1) < sum(result2) or sum(result1) == sum(result2):
                 result['value'][0] = result2
-            logger.info(result['value'])
             await delete_message(ctx)
-            await display_roll(ctx, what, result['value'], operators, modifier, int(integer), adv=True, rolls_array=[result1, result2])
+            await display_roll(ctx, what, result['value'], operators, modifiers, adv=True, rolls_array=[result1, result2])
     
     #Roll with Disadvantage
     @bot.command(
@@ -365,7 +383,7 @@ def run():
         description="Rolls the first die twice, and takes the lowest result. Can still be modified by adding additional dice and a modifier.",
         brief="Rolls the dice with disadvantage."
     )
-    async def rd(ctx, what="No Dice were clarified", modifier="+", integer="0"):
+    async def rd(ctx, *, what):
         """Answers with pong"""
         set_random_seed()
         author = await get_name(ctx)
@@ -374,10 +392,8 @@ def run():
         
         result = {"value":[]}
         array = []
-        if(integer.isdigit() == False):
-            integer = 0
         if("d" in what):
-            dice, operators = await process_roll(ctx, author, what)
+            dice, operators, modifiers = await process_roll(what)
             for die in dice:
                 result['value'].append(roll_dice(user_id_hash, die))
             result1 = result['value'][0]
@@ -387,9 +403,8 @@ def run():
                 result['value'][0] = result1
             elif sum(result1) > sum(result2) or sum(result1) == sum(result2):
                 result['value'][0] = result2
-            logger.info(result['value'])
             await delete_message(ctx)
-            await display_roll(ctx, what, result['value'], operators, modifier, int(integer), dis=True, rolls_array=[result1, result2])
+            await display_roll(ctx, what, result['value'], operators, modifiers, dis=True, rolls_array=[result1, result2])
     
     #Roll with Disadvantage
     @bot.command(
@@ -417,10 +432,16 @@ def run():
             
         await delete_message(ctx)
         await display_emphasized_roll(ctx, result['value'], [result1, result2])
+    
+    @bot.command(
+        aliases=["input", "test", "inputTest", "IT", "it"],
+        help="test for new way of receiving commands",
+    )
+    async def iT(ctx, *, input_text):
+        await ctx.send(input_text)
+        
 
     bot.run(settings.DISCORD_API_TOKEN, root_logger=True)
-    
-    print(settings.DISCORD_API_TOKEN)
 
 if __name__ == "__main__":
     run()
