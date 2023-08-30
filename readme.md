@@ -5,6 +5,7 @@ Commands
 All commands must be preferenced with either ! or \
 
 commands include:
+
 !r - roll dice,  examples of syntax:
 
 !r 2d20+d4 + 5
