@@ -4,7 +4,7 @@ Commands
 
 All commands must be preferenced with either ! or \
 
-commands include:					
+commands include:					  
 
 !r - roll dice,  examples of syntax:
 
