@@ -38,13 +38,13 @@
     - Planned to be server specific at a later date.
 
 ## Simple Dice Commands
-- !d4 rolls a d4 `!d4 +5` `!d4 +d8+10`
-- !d6 rolls a d6 `!d6 +5` `!d6 +d12-6`
-- !d8 rolls a d8 `!d8 +5` `!d8 +d4+2-4`
-- !d10 rolls a d10 `!d10 +5` `!d10 +5-10`
-- !d12 rolls a d12 `!d12 +5` `!d12 +5-d4`
-- !d20 rolls a d20 `!d20 +5` `!d20 +8+d10`
-- !d100 rolls a d100 `!d100 +5` `!d100 +d4+10`
+- **!d4** rolls a d4 `!d4 +5` `!d4 +d8+10`
+- **!d6** rolls a d6 `!d6 +5` `!d6 +d12-6`
+- **!d8** rolls a d8 `!d8 +5` `!d8 +d4+2-4`
+- **!d10** rolls a d10 `!d10 +5` `!d10 +5-10`
+- **!d12** rolls a d12 `!d12 +5` `!d12 +5-d4`
+- **!d20** rolls a d20 `!d20 +5` `!d20 +8+d10`
+- **!d100** rolls a d100 `!d100 +5` `!d100 +d4+10`
 
 
 ## Features
