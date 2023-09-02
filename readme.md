@@ -12,7 +12,7 @@
 &emsp; `!r 4d20 -1d20+ 2d6-1+5 - 0` <br>
 - **!ra**<br>
 
-&emsp; rolls the first die type with advantage, for example `!ra d20+d4` rolls only the d20 with advantage.
+&emsp; rolls the first die type with advantage, for example `!ra d20+d4` rolls only the d20 with advantage. <br>
 &emsp; It will roll all dice of that type, example `!ra 2d20+2d4` rolls both d20 dice on advantage.
 - **!rd**<br>
 
@@ -25,7 +25,7 @@
 &emsp; rolls 2 d20's and selects the one furthest from 10 with no regard to karmic settings. `!rea` do not add anything else to the command.
 - **!sn**<br>
 
-&emsp; Allows the user to change their name the bot uses on the said server. `!sn Bob Howell`
+&emsp; Allows the user to change their name the bot uses on the said server. `!sn Bob Howell` <br>
 &emsp; Whatever is typed after the command and first space `!sn ` will be their new name.
 - **!sk**<br>
 
