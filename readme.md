@@ -5,11 +5,11 @@
 - **!r**<br>
 
 &emsp; rolls various dice with or without modifiers. Only accepts `-` and `+` as operators.
-&emsp; Examples:
-&emsp; `!r d20+2d4-d6 +5-10+5`
-&emsp; `!r d20 + 2d4 - d6 +5 - 10 +5`
-&emsp; `!r d20+2d4 - d6 + 5- 10+5`
-&emsp; `!r 4d20 -1d20+ 2d6-1+5 - 0`
+&emsp; Examples:<br>
+&emsp; `!r d20+2d4-d6 +5-10+5`<br>
+&emsp; `!r d20 + 2d4 - d6 +5 - 10 +5`<br>
+&emsp; `!r d20+2d4 - d6 + 5- 10+5`<br>
+&emsp; `!r 4d20 -1d20+ 2d6-1+5 - 0`<br>
 - **!ra**<br>
 
 &emsp; rolls the first die type with advantage, for example `!ra d20+d4` rolls only the d20 with advantage.
