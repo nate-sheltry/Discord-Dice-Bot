@@ -35,3 +35,9 @@ cython_debug/
 .json
 .log
 .pyc
+
+# use
+/logs
+/guilds_data
+__pycache__/
+

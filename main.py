@@ -53,38 +53,42 @@ def load_names():
     return empty_dict
 
 async def process_roll(input_text):
-    space_string = ''
-    components = re.split(r'([+-])', input_text)
-    space_string = ''.join(components)
-    if(' ' in input_text):
-        components = re.split(r'\s', input_text)
+    try:
+        space_string = ''
+        components = re.split(r'([+-])', input_text)
         space_string = ''.join(components)
-        components = re.split(r'([+-])', space_string)
-    
-    
-    dice = []
-    operators = []
-    modifiers = []
-    
-    for comp in components:
-        if comp in ('+', '-'):
-            operators.append(comp)
-        else:
-            match = re.match(r'(\d*)d(\d+)', comp)
-            if match:
-                num_dice = int(match.group(1) or 1)
-                dice_sides = int(match.group(2))
-                dice.append((num_dice, dice_sides))
+        if(' ' in input_text):
+            components = re.split(r'\s', input_text)
+            space_string = ''.join(components)
+            components = re.split(r'([+-])', space_string)
+        
+        
+        dice = []
+        operators = []
+        modifiers = []
+        
+        for comp in components:
+            if comp in ('+', '-'):
+                operators.append(comp)
             else:
-                value = comp
-                operator = operators.pop(len(operators)-1)
-                modifiers.append((operator, int(value)))
-    
-    print(f'Dice: {dice}')
-    print(f'Operators: {operators}')
-    print(f'Modifiers: {modifiers}')
-    
-    return dice, operators, modifiers
+                match = re.match(r'(\d*)d(\d+)', comp)
+                if match:
+                    num_dice = int(match.group(1) or 1)
+                    dice_sides = int(match.group(2))
+                    dice.append((num_dice, dice_sides))
+                else:
+                    value = comp
+                    operator = operators.pop(len(operators)-1)
+                    modifiers.append((operator, int(value)))
+        
+        print(f'Dice: {dice}')
+        print(f'Operators: {operators}')
+        if(len(modifiers) > 0):
+            print(f'Modifiers: {modifiers}')
+        
+        return dice, operators, modifiers
+    except:
+        return None, None, None,
 
 def roll_die(player_id, max_num, min_num=1):
     roll = random.randint(min_num, max_num)
@@ -178,11 +182,11 @@ async def display_roll(ctx, what, dice, operators, modifiers, adv=False, dis=Fal
     roll = Tm.inline_code(what)
     
     if(adv == False and dis == False):
-        message += f'{name} rolled {roll}:\n===========================================================\n'
+        message += f'## {name} rolled {roll}:\n'
     elif(adv == True):
-        message += f'{name} rolled with Advantage {roll}:\n===========================================================\n'
+        message += f'## {name} rolled with Advantage {roll}:\n'
     elif(dis == True):
-        message += f'{name} rolled with Disadvantage {roll}:\n========================================\n'
+        message += f'## {name} rolled with Disadvantage {roll}:\n'
     
     #display total
     for i in range(len(dice)):
@@ -234,27 +238,29 @@ async def display_roll(ctx, what, dice, operators, modifiers, adv=False, dis=Fal
     
     logger.info(temp_array)
     
-    dice_message += Tm.block_quote(f' {Tm.inline_code("Total Dice Modifier")}: {Tm.bold_italics(total-temp_array[0])}\n>  \n')
-    dice_message += '>  ' + f'{Tm.bold("Modifiers:")}\n'
-    dice_message += '>  ('
-    
-    for i in range(len(modifiers)):
-        modifier = modifiers[i]
-        if('+' in modifier[0]):
-            modifier_total += modifier[1]
-            if(i == 0):dice_message += f' {modifier[1]} '
-            else:dice_message += f'\t {modifier[0]} \t {modifier[1]}'
-        elif('-' in modifier[0]):
-            modifier_total -= modifier[1]
-            if(i == 0):dice_message += f' {modifier[0]}{modifier[1]} '
-            else:dice_message += f'\t {modifier[0]} \t {modifier[1]} '
-    dice_message += ')\n'
-    dice_message += '>  ' + f'------------------------------\n'
-    dice_message += Tm.block_quote(f' {Tm.inline_code("Modifiers Total")}: {Tm.bold_italics(f"{modifier_total}")}')
+    # dice_message += Tm.block_quote(f' {Tm.inline_code("Total Dice Modifier")}: {Tm.bold_italics(total-temp_array[0])}\n>  \n')
+    if(len(modifiers) > 0):
+        dice_message += '>  ' + f'{Tm.bold("Modifiers:")}\n'
+        dice_message += '>  ('
+        
+        for i in range(len(modifiers)):
+            modifier = modifiers[i]
+            if('+' in modifier[0]):
+                modifier_total += modifier[1]
+                if(i == 0):dice_message += f' {modifier[1]} '
+                else:dice_message += f'\t {modifier[0]} \t {modifier[1]}'
+            elif('-' in modifier[0]):
+                modifier_total -= modifier[1]
+                if(i == 0):dice_message += f' {modifier[0]}{modifier[1]} '
+                else:dice_message += f'\t {modifier[0]} \t {modifier[1]} '
+        dice_message += ')\n'
+        dice_message += '>  ' + f'------------------------------\n'
+        dice_message += Tm.block_quote(f' {Tm.inline_code("Modifiers Total")}: {Tm.bold_italics(f"{modifier_total}")}\n')
     message += dice_message
     
-    message += f'\n' + '> \n' + (f' {Tm.inline_code("Total")}: {Tm.bold_italics(f"{total+modifier_total}")}\t')
-    message += Tm.inline_code(f'Natural Roll Value') + f': {Tm.bold_italics(temp_array[0])}'
+    message += (f'### {Tm.inline_code("Total")}: {Tm.bold_italics(f"{total+modifier_total}")}\t')
+    if(len(modifiers) > 0):
+        message += Tm.inline_code(f'Natural Roll Value') + f': {Tm.bold_italics(temp_array[0])}'
     await ctx.send(message)
 
 #Program Run/Commands and Events
@@ -341,6 +347,8 @@ def run():
         result = {"value":[]}
         if("d" in what):
             dice, operators, modifiers = await process_roll(what)
+            if(dice == operators == modifiers == None):
+                return
             for die in dice:
                 result['value'].append(roll_dice(user_id_hash, die))
             await delete_message(ctx)
@@ -365,6 +373,8 @@ def run():
         array = []
         if("d" in what):
             dice, operators, modifiers = await process_roll(what)
+            if(dice == operators == modifiers == None):
+                return
             for die in dice:
                 result['value'].append(roll_dice(user_id_hash, die))
             result1 = result['value'][0]
@@ -394,6 +404,8 @@ def run():
         array = []
         if("d" in what):
             dice, operators, modifiers = await process_roll(what)
+            if(dice == operators == modifiers == None):
+                return
             for die in dice:
                 result['value'].append(roll_dice(user_id_hash, die))
             result1 = result['value'][0]
