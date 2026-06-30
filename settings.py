@@ -55,4 +55,5 @@ LOGGING_CONFIG = {
     }
 }
 
+os.makedirs("logs", exist_ok=True)
 dictConfig(LOGGING_CONFIG)
