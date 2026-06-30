@@ -42,6 +42,7 @@ def exit_handler(ctx, data, guild_id):
 
 def load_names():
     directory = os.path.join(SCRIPT_DIRECTORY, SUBDIRECTORY)
+    os.makedirs(directory, exist_ok=True)
     filelist = os.listdir(directory)
     empty_dict = {}
     for file in filelist:
