@@ -143,7 +143,12 @@ def roll_dice(player_id, dice):
     return dice_rolled
 
 async def delete_message(ctx):
-    await ctx.message.delete()
+    try:
+        await ctx.message.delete()
+    except discord.NotFound:
+        pass
+    except discord.Forbidden:
+        logger.warning(f"Missing permissions to delete in {ctx.channel}")
 
 async def get_name(ctx):
     user_name = 'None'
