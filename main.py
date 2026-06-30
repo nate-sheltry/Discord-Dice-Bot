@@ -37,7 +37,9 @@ def set_random_seed():
     random.seed(current_time)
 
 def exit_handler(ctx, data, guild_id):
-    with open(f'{SUBDIRECTORY}/{guild_id}.json', 'w') as file:
+    directory = os.path.join(SCRIPT_DIRECTORY, SUBDIRECTORY)
+    os.makedirs(directory, exist_ok=True)
+    with open(f'{directory}/{guild_id}.json', 'w') as file:
         json.dump(data, file)
 
 def load_names():
