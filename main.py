@@ -366,9 +366,21 @@ def run():
         await ctx.send(Tm.bold('Guild ID: ') + Tm.italics(str(guild_id_hash)))
         await ctx.send(Tm.bold('Karmic Setting: ') + Tm.italics(f'{karmic[0]}'))
     
+    @bot.tree.command(
+        name="set-name",
+        description="Sets a custom name for rolls."
+    )
+    async def setName(interaction, name:str):
+        guild_id = str(interaction.guild.id)
+        guild_id_hash = hash_string(guild_id)
+        user_id = str(interaction.user.id)
+        user_id_hash = hash_string(user_id)
+        guilds.update({guild_id_hash: {user_id_hash: name} })
+        exit_handler(interaction, guilds, guild_id_hash)
+        await interaction.response.send_message(f'{interaction.user.name} set their Name to {guilds.get(guild_id_hash).get(user_id_hash)}')
+    
     @bot.command(
-        name="SetName",
-        aliases=["setName","sn"],
+        aliases=["setName","SN"],
         help="Set a custom name for the bot to use. !sn name",
         description="Allows a user to",
         brief="Brief Message"
@@ -388,7 +400,7 @@ def run():
         name="roll",
         description="roll some dice.",
     )
-    async def roll(interaction, number_of_dice:int, die: int):
+    async def roll(interaction, number_of_dice:Literal[1,2,3,4,5,6,7,8,9,10], die:Literal[2,3,4,6,8,10,12,20,100]):
         set_random_seed()
         user = await get_name(interaction)
         user_id = str(interaction.user.id)
