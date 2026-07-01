@@ -4,6 +4,7 @@ import hashlib
 import random
 import time
 import json
+from aiohttp import web
 from typing import Literal
 from discord.ext import commands
 from text_formatting import text_methods as Tm
@@ -25,8 +26,20 @@ player_rolls = {}
 
 user_names = {}
 
-#Methods/Functions for Program Use
+# WebService Uptime
+async def health_check(request):
+    return web.Response(text="Bot is running")
 
+async def start_web_server():
+    app = web.Application()
+    app.router.add_get("/", health_check)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    port = int(os.environ.get("PORT", 10000))
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+
+#Methods/Functions for Program Use
 def hash_string(string):
     sha256 = hashlib.sha256()
     sha256.update(f'{settings.PREHASH}{string}'.encode('utf-8'))
@@ -312,6 +325,8 @@ def run():
             logger.info(f"Synced {len(synced)} slash commands")
         except Exception as e:
             logger.error(f"Failed to sync commands: {e}")
+            
+        bot.loop.create_task(start_web_server())
         
     @bot.hybrid_command(
         name="karmic-setting",
