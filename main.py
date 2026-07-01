@@ -28,6 +28,7 @@ user_names = {}
 
 # WebService Uptime
 async def health_check(request):
+    logger.info("Uptime message received.")
     return web.Response(text="Bot is running")
 
 async def start_web_server():
