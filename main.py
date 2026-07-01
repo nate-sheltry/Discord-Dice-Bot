@@ -4,6 +4,7 @@ import hashlib
 import random
 import time
 import json
+from typing import Literal
 from discord.ext import commands
 from text_formatting import text_methods as Tm
 import re
@@ -143,6 +144,8 @@ def roll_dice(player_id, dice):
     return dice_rolled
 
 async def delete_message(ctx):
+    if ctx.interaction is not None:
+        return
     try:
         await ctx.message.delete()
     except discord.NotFound:
@@ -154,15 +157,26 @@ async def get_name(ctx):
     user_name = 'None'
     guild_id = str(ctx.guild.id)
     guild_id_hash = hash_string(guild_id)
-    user_id = str(ctx.author.id)
-    user_id_hash = hash_string(user_id)
-    if(guild_id_hash in guilds):
-        if(user_id_hash in guilds.get(guild_id_hash)):
-            return f'{guilds.get(guild_id_hash).get(user_id_hash)}'
-    if user_name == 'None':
-        user_name = ctx.author.nick
-        if str(user_name) == 'None':
-            user_name = ctx.author.name
+    try:
+        user_id = str(ctx.author.id)
+        user_id_hash = hash_string(user_id)
+        if(guild_id_hash in guilds):
+            if(user_id_hash in guilds.get(guild_id_hash)):
+                return f'{guilds.get(guild_id_hash).get(user_id_hash)}'
+        if user_name == 'None':
+            user_name = ctx.author.nick
+            if str(user_name) == 'None':
+                user_name = ctx.author.name
+    except AttributeError:
+        user_id = str(ctx.user.id)
+        user_id_hash = hash_string(user_id)
+        if(guild_id_hash in guilds):
+            if(user_id_hash in guilds.get(guild_id_hash)):
+                return f'{guilds.get(guild_id_hash).get(user_id_hash)}'
+        if user_name == 'None':
+            user_name = ctx.user.nick
+            if str(user_name) == 'None':
+                user_name = ctx.user.name
     return user_name
 
 
@@ -175,7 +189,10 @@ async def display_emphasized_roll(ctx, dice, rolls_array):
     message += '>  (' + f'\t{rolls_array[1]}\t' + f') \t {Tm.bold(str(abs(rolls_array[1]-10)))} from {Tm.bold("10")}  \n'
     message += '>  ' + f'------------------------------\n'
     message += f'   {Tm.inline_code("Result")}: {Tm.bold_italics(dice)}'
-    await ctx.send(message)
+    try:
+        await ctx.send(message)
+    except AttributeError:
+        await ctx.response.send_message(message)
     
     
 
@@ -269,7 +286,10 @@ async def display_roll(ctx, what, dice, operators, modifiers, adv=False, dis=Fal
     message += (f'### {Tm.inline_code("Total")}: {Tm.bold_italics(f"{total+modifier_total}")}\t')
     if(len(modifiers) > 0):
         message += Tm.inline_code(f'Natural Roll Value') + f': {Tm.bold_italics(temp_array[0])}'
-    await ctx.send(message)
+    try:
+        await ctx.send(message)
+    except AttributeError:
+        await ctx.response.send_message(message)
 
 #Program Run/Commands and Events
     
@@ -285,21 +305,32 @@ def run():
     async def on_ready():
         data = load_names()
         if data:
-            print('yes')
             guilds.update(data)
         logger.info(f"(User: {bot.user}) (ID: {bot.user.id})")
+        try:
+            synced = await bot.tree.sync()
+            logger.info(f"Synced {len(synced)} slash commands")
+        except Exception as e:
+            logger.error(f"Failed to sync commands: {e}")
         
-    @bot.command(
+    @bot.hybrid_command(
+        name="karmic-setting",
         aliases=['switchKarmic', 'sK', 'SK', 'Sk'],
         help="Entering this command will disable or Enable Karmic Dice for D20 rolls, !sk",
-        description="Entering this command will disable or enable Karmic Dice, followed by a prompt determining which mode the bot is in.",
+        description="Set whether the d20 dice should mitigating outlier rolls.",
         brief="Switch whether dice are Karmic or Not."
     )
-    async def sk(ctx):
-        if karmic[0]:
-            karmic[0] = False
-        elif karmic[0] == False:
-            karmic[0] = True
+    async def sk(ctx, mode: Literal["On", "Off"]):
+        if mode == None:
+            if karmic[0]:
+                karmic[0] = False
+            elif karmic[0] == False:
+                karmic[0] = True
+        else:
+            if(mode == "On"):
+                karmic[0] = True
+            elif(mode == "Off"):
+                karmic[0] = False
         await ctx.send(f"The Karmic setting is set to {karmic[0]}.")
     
     @bot.command(
@@ -321,46 +352,65 @@ def run():
         await ctx.send(Tm.bold('Karmic Setting: ') + Tm.italics(f'{karmic[0]}'))
     
     @bot.command(
-        aliases=["setName"],
+        name="SetName",
+        aliases=["setName","sn"],
         help="Set a custom name for the bot to use. !sn name",
         description="Allows a user to",
         brief="Brief Message"
     )
-    async def sn(ctx, what):
+    async def sn(ctx, name):
         guild_id = str(ctx.guild.id)
         guild_id_hash = hash_string(guild_id)
         user_id = str(ctx.author.id)
         user_id_hash = hash_string(user_id)
-        guilds.update({guild_id_hash: {user_id_hash: what} })
+        guilds.update({guild_id_hash: {user_id_hash: name} })
         exit_handler(ctx, guilds, guild_id_hash)
         await delete_message(ctx)
         await ctx.send(f'{ctx.author.name} set their Name to {guilds.get(guild_id_hash).get(user_id_hash)}')
     
+    #Roll Slash Command
+    @bot.tree.command(
+        name="roll",
+        description="roll some dice.",
+    )
+    async def roll(interaction, number_of_dice:int, die: int):
+        set_random_seed()
+        user = await get_name(interaction)
+        user_id = str(interaction.user.id)
+        user_id_hash = hash_string(user_id)
+        if number_of_dice < 1 or die < 2:
+            await interaction.response.send_message("Dice count must be at least 1 and Dice sides at least 2.", ephemeral=True)
+            return
+        
+        what = f'{number_of_dice}d{die}'
+        dice, operators, modifiers = await process_roll(what)
+        result = {"value": []}
+        for d in dice:
+            result['value'].append(roll_dice(user_id_hash, d))
+        await display_roll(interaction, what, result['value'], operators, modifiers)
+        
     #Roll Command
     @bot.command(
-        aliases=["roll", "R"],
+        aliases=["R"],
         help="Roll's the specified dice with a potential modifier, !r 2d20 + 5",
-        description="Rolls the said die, if no number precedes the die side, d20, it will assume there is only one.\n"+
-        "Likewise, you may modifiy your roll by other dices by following the syntax: !r d20-2d4+4d6 + modifier\n" +
-        "It only supports one numeric modifier that is not a die, and must be formatted as shown with a space on both sides of the arithmetic operator.",
+        description="Rolls the following specified dice, may add or subtract withe dice or integers.\n",
         brief="Roll dice, modify your main dice roll and add a modifier."
     )
-    async def r(ctx, *, what):
-        """Answers with pong"""
+    async def r(ctx, *, dice_string):
         set_random_seed()
         author = await get_name(ctx)
         user_id = str(ctx.author.id)
         user_id_hash = hash_string(user_id)
         
         result = {"value":[]}
-        if("d" in what):
-            dice, operators, modifiers = await process_roll(what)
+        if("d" in dice_string):
+            dice, operators, modifiers = await process_roll(dice_string)
             if(dice == operators == modifiers == None):
                 return
             for die in dice:
                 result['value'].append(roll_dice(user_id_hash, die))
             await delete_message(ctx)
-            await display_roll(ctx, what, result['value'], operators, modifiers)
+            await display_roll(ctx, dice_string, result['value'], operators, modifiers)
                 
             
     #Roll with Advantage
